@@ -189,7 +189,11 @@ for i in range(len(assembly_lines)):                      # traversing through a
                 f.write(output_line)
             continue
         output_line=immediate_binary+register_encoding[source_address_register]+i_type_dictionary[instruction_type[i+1]][1]+register_encoding[return_addrress_register]+i_type_dictionary[instruction_type[i+1]][0]
-    
+        if(count!=len(assembly_lines)-1):
+            f.write(output_line+"\n")
+            count=count+1
+        else:
+            f.write(output_line)
     elif instruction_type[i+1] in s_type_dictionary.keys():
         data_register=registers_or_immediate[i+1][0]
         source_address_register=registers_or_immediate[i+1][1].split("(")[1].rstrip(")")
