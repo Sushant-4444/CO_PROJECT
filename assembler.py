@@ -229,8 +229,8 @@ for i in range(len(assembly_lines)):                      # traversing through a
             else:
                 f.write(output_line)
         elif registers_or_immediate[i+1][2] in label_dictionary.keys():
-            label_linenumber=label_dictionary[registers_or_immediate[i+1][2]]
-            label_immidiate=int_to_bin((label_linenumber-i)*4,12)
+            label_lineno=label_dictionary[registers_or_immediate[i+1][2]]
+            label_immidiate=int_to_bin((i-label_lineno)*4,13)
             if registers_or_immediate[i+1][0] not in register_encoding.keys() or registers_or_immediate[i+1][1] not in register_encoding.keys():
                 output_line=(f'ERROR: not valid register')
                 if count!=len(assembly_lines)-1:
