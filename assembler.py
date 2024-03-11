@@ -69,6 +69,7 @@ u_type_dictionary={                         # U-type instructions encoding dicti
 j_type_dictionary={                        # J-type instructions encoding dictionary
     "jal":"1101111",                        # opcode mapping
 }
+label_dictionary={}                         # label dictionary for storing labels and their line numbers
 def int_to_bin(num,bits):                    # function for integer to binary conversion with n no of bits
     bin_of_num=""
     bin_2_complement=""
@@ -103,7 +104,7 @@ def int_to_bin(num,bits):                    # function for integer to binary co
         for i in range(bits-len(bin_of_num)):
             bin_of_num="0"+bin_of_num
     return bin_of_num
-f=open("./assembly_code.txt","r")                       # file handling for taking assembly code as input from file
+f=open("./input.txt","r")                       # file handling for taking assembly code as input from file
 assembly_lines=f.readlines()
 for i in range(len(assembly_lines)):
     assembly_lines[i]=assembly_lines[i].rstrip("\n")
@@ -111,18 +112,25 @@ f.close()
 
 
 
-f=open("./machine_code.txt","w")            # file handling for taking machine code as output in a file
+f=open("./output.txt","w")            # file handling for taking machine code as output in a file
 count=0
 instruction_type={}                        # extracting instruction_type from assembly lines into dictionary woth key as line number
 for i in range(len(assembly_lines)):
     # extractang instruction type
-    instruction_type[i+1]=assembly_lines[i].split(" ")[0]
+    if ":" in assembly_lines[i]:
+        label_dictionary[assembly_lines[i].split(":")[0]]=i
+        instruction_type[i+1]=assembly_lines[i].split(":")[1].lstrip().split(" ")[0]
+    else:
+        instruction_type[i+1]=assembly_lines[i].lstrip().split(" ")[0]
 
 
 part_2={}                                   # extracting part 2 of each assembly line into dictionary with key as line number
 for i in range(len(assembly_lines)):
     # extracting part 2
-    part_2[i+1]=assembly_lines[i].split(" ")[1]
+    if ":" in assembly_lines[i]:
+        part_2[i+1]=assembly_lines[i].split(":")[1].lstrip().split(" ")[1]
+    else:
+        part_2[i+1]=assembly_lines[i].lstrip().split(" ")[1]
 
 
 registers_or_immediate={}                    # extracting registers/immediadate from part 2 into dictionary with key as line number
@@ -133,7 +141,15 @@ for i in range(len(part_2)):
 for i in range(len(assembly_lines)):                      # traversing through assembly lines
     # for each assembly checking which insgtruction type is it
     if instruction_type[i+1] in r_type_dictionary.keys():
-        # print("only for debbuging purpose" +" "+ instruction_type[i+1]+" "+ registers_or_immediate[i+1][2] )
+        if registers_or_immediate[i+1][2] not in register_encoding.keys() or registers_or_immediate[i+1][1] not in register_encoding.keys() or registers_or_immediate[i+1][0] not in register_encoding.keys():
+            output_line=(f'ERROR: not valid register')
+            if(count!=len(assembly_lines)-1):
+                f.write(output_line+"\n")
+                count=count+1
+            else:
+                f.write(output_line)
+            continue
+
         output_line=r_type_dictionary[instruction_type[i+1]][1]+register_encoding[registers_or_immediate[i+1][2]]+register_encoding[registers_or_immediate[i+1][1]]+ r_type_dictionary[instruction_type[i+1]][0]+ register_encoding[registers_or_immediate[i+1][0]]+r_type_dictionary["opcode"]
         if(count!=len(assembly_lines)-1):
             f.write(output_line+"\n")
@@ -141,9 +157,17 @@ for i in range(len(assembly_lines)):                      # traversing through a
         else:
             f.write(output_line)
 
-    elif instruction_type[i+1] in i_type_dictionary.keys():
+    elif instruction_type[i+1] in i_type_dictionary.keys() and ("(" not in part_2[i+1]):
         immediate_value=int(registers_or_immediate[i+1][2])
         immediate_binary=int_to_bin(immediate_value,12)
+        if registers_or_immediate[i+1][1] not in register_encoding.keys() or registers_or_immediate[i+1][0] not in register_encoding.keys():
+            output_line=(f'ERROR: not valid register')
+            if(count!=len(assembly_lines)-1):
+                f.write(output_line+"\n")
+                count=count+1
+            else:
+                f.write(output_line)
+            continue
         output_line=immediate_binary+register_encoding[registers_or_immediate[i+1][1]]+i_type_dictionary[instruction_type[i+1]][1]  + register_encoding[registers_or_immediate[i+1][0]]  + i_type_dictionary[instruction_type[i+1]][0]
         if(count!=len(assembly_lines)-1):
             f.write(output_line+"\n")
@@ -151,33 +175,90 @@ for i in range(len(assembly_lines)):                      # traversing through a
         else:
             f.write(output_line)
 
-
+    elif instruction_type[i+1] in i_type_dictionary.keys() and ("(" in part_2[i+1]):
+        immediate_value=int(registers_or_immediate[i+1][1].split("(")[0])
+        immediate_binary=int_to_bin(immediate_value,12)
+        return_addrress_register=registers_or_immediate[i+1][0]
+        source_address_register=registers_or_immediate[i+1][1].split("(")[1].rstrip(")")
+        if return_addrress_register not in register_encoding.keys() or source_address_register not in register_encoding.keys():
+            output_line=(f'ERROR: not valid register')
+            if(count!=len(assembly_lines)-1):
+                f.write(output_line+"\n")
+                count=count+1
+            else:
+                f.write(output_line)
+            continue
+        output_line=immediate_binary+register_encoding[source_address_register]+i_type_dictionary[instruction_type[i+1]][1]+register_encoding[return_addrress_register]+i_type_dictionary[instruction_type[i+1]][0]
+    
     elif instruction_type[i+1] in s_type_dictionary.keys():
         data_register=registers_or_immediate[i+1][0]
         source_address_register=registers_or_immediate[i+1][1].split("(")[1].rstrip(")")
         immediate_offset=int(registers_or_immediate[i+1][1].split("(")[0])
         binary_immediate_offset=int_to_bin(immediate_offset,12)
-        output_line=binary_immediate_offset[0:7]+register_encoding[data_register]+register_encoding[source_address_register]+s_type_dictionary[instruction_type[i+1]][1]+binary_immediate_offset[7:12]+" "+s_type_dictionary[instruction_type[i+1]][0]
-        if(count!=len(assembly_lines)-1):
+
+        if data_register not in register_encoding.keys() or source_address_register not in register_encoding.keys():
+            output_line=(f'ERROR: not valid register')
+            if(count!=len(assembly_lines)-1):
+                f.write(output_line+"\n")
+                count=count+1
+            else:
+                f.write(output_line)
+            continue
+        output_line=binary_immediate_offset[0:7]+register_encoding[data_register]+register_encoding[source_address_register]+s_type_dictionary[instruction_type[i+1]][1]+binary_immediate_offset[7:12]+s_type_dictionary[instruction_type[i+1]][0]
+        if count!=len(assembly_lines)-1:
             f.write(output_line+"\n")
             count=count+1
         else:
             f.write(output_line)
     elif instruction_type[i+1] in b_type_dictionary.keys():
-        label_immidiate=int(registers_or_immediate[i+1][2])
-        label_immidiate_bin=int_to_bin(label_immidiate,13)
-        output_line=label_immidiate_bin[0]+label_immidiate_bin[2:8]+register_encoding[registers_or_immediate[i+1][1]]+register_encoding[registers_or_immediate[i+1][0]]+b_type_dictionary[instruction_type[i+1]][1]+label_immidiate_bin[8:12]+label_immidiate_bin[1]+b_type_dictionary[instruction_type[i+1]][0]
-        if(count!=len(assembly_lines)-1):
-            f.write(output_line+"\n")
-            count=count+1
-        else:
-            f.write(output_line)
-
+        if registers_or_immediate[i+1][2] not in label_dictionary.keys():
+            label_immidiate=int(registers_or_immediate[i+1][2])
+            label_immidiate_bin=int_to_bin(label_immidiate,13)
+            if registers_or_immediate[i+1][0] not in register_encoding.keys() or registers_or_immediate[i+1][1] not in register_encoding.keys():
+                output_line=(f'ERROR: not valid register')
+                if count!=len(assembly_lines)-1 :
+                    f.write(output_line+"\n")
+                    count=count+1
+                else:
+                    f.write(output_line)
+                continue
+            output_line=label_immidiate_bin[0]+label_immidiate_bin[2:8]+register_encoding[registers_or_immediate[i+1][1]]+register_encoding[registers_or_immediate[i+1][0]]+b_type_dictionary[instruction_type[i+1]][1]+label_immidiate_bin[8:12]+label_immidiate_bin[1]+b_type_dictionary[instruction_type[i+1]][0]
+            if count!=len(assembly_lines)-1:
+                f.write(output_line+"\n")
+                count=count+1
+            else:
+                f.write(output_line)
+        elif registers_or_immediate[i+1][2] in label_dictionary.keys():
+            label_linenumber=label_dictionary[registers_or_immediate[i+1][2]]
+            label_immidiate=int_to_bin((label_linenumber-i)*4,12)
+            if registers_or_immediate[i+1][0] not in register_encoding.keys() or registers_or_immediate[i+1][1] not in register_encoding.keys():
+                output_line=(f'ERROR: not valid register')
+                if count!=len(assembly_lines)-1:
+                    f.write(output_line+"\n")
+                    count=count+1
+                else:
+                    f.write(output_line)
+                continue
+            output_line=label_immidiate[0]+label_immidiate[2:8]+register_encoding[registers_or_immediate[i+1][1]]+register_encoding[registers_or_immediate[i+1][0]]+b_type_dictionary[instruction_type[i+1]][1]+label_immidiate[8:12]+label_immidiate[1]+b_type_dictionary[instruction_type[i+1]][0]
+            if count!=len(assembly_lines)-1:
+                f.write(output_line+"\n")
+                count=count+ 1
+            else:
+                f.write(output_line)
     elif instruction_type[i+1] in u_type_dictionary.keys():
         immediate_value=int(registers_or_immediate[i+1][1])
         immediate_binary=int_to_bin(immediate_value,32)
+        if registers_or_immediate[i+1][0] not in register_encoding.keys():
+            output_line=(f'ERROR: not valid register')
+            if count!=len(assembly_lines)-1:
+                f.write(output_line+"\n")
+                count=count+1
+            else:
+                f.write(output_line)
+            continue
+        
         output_line=immediate_binary[0:20]+register_encoding[registers_or_immediate[i+1][0]]+ u_type_dictionary[instruction_type[i+1]]
-        if(count!=len(assembly_lines)-1):
+        if count!=len(assembly_lines)-1:
             f.write(output_line+"\n")
             count=count+1
         else:
@@ -186,14 +267,30 @@ for i in range(len(assembly_lines)):                      # traversing through a
     elif instruction_type[i+1] in j_type_dictionary.keys():
         label_immidiate=int(registers_or_immediate[i+1][1])
         label_immidiate_bin =int_to_bin(label_immidiate,21)
+        if registers_or_immediate[i+1][0] not in register_encoding.keys():
+            output_line=(f'ERROR: not valid register')
+            if count!=len(assembly_lines)-1:
+                f.write(output_line+"\n")
+                count=count+ 1
+            else:
+                f.write(output_line)
+            continue
+        
         output_line=label_immidiate_bin[0]+label_immidiate_bin[10:20] +label_immidiate_bin[9]+label_immidiate_bin[1:9]+register_encoding[registers_or_immediate[i+1][0]]+j_type_dictionary[instruction_type[i+1]]
-        if(count!=len(assembly_lines)-1):
+        if count!=len(assembly_lines)-1:
             f.write(output_line+"\n")
             count=count+ 1
         else:
             f.write(output_line)
+
+
     else:
         # for wrong instructions types
-        print(f'Invalid instruction , {instruction_type[i+1]} is not a valid instruction.Please check the instruction at line {i+1} in the assembly code.')
+        output_line=(f'ERROR: {instruction_type[i+1]} is not a valid instruction at line {i+1}')
+        if count!=len(assembly_lines)-1:
+            f.write(output_line+"\n")
+            count=count+ 1
+        else:
+            f.write(output_line)
 
 f.close()
