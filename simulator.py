@@ -1,3 +1,4 @@
+
 import sys
 
 
@@ -155,7 +156,7 @@ def simulator(instruction):
         register_values["PC"] = int_to_bin(int(register_values["PC"], 2) + 4, 32)
         if funct7 == "0000000":
             if funct3 == "000":
-                print(register_values["00000"])
+                # print(register_values["00000"])
                 register_values[rd] = int_to_bin(
                     bin_to_int(register_values[rs1]) + bin_to_int(register_values[rs2]),
                     32,
@@ -419,11 +420,15 @@ def simulator(instruction):
 # ]
 
 instructions = []
+with open(sys.argv[1], "r") as file:
+    instructions=[instruction.strip() for instruction in file.readlines()]
+with open (sys.argv[2], "w") as file:
+    file.write("")
 index = int(0)
 while index in range(0, len(instructions)):
     if instructions[index] == "00000000000000000000000001100011":
         simulator(instructions[index])
-        with open("output11.txt", "a") as file:
+        with open(sys.argv[2], "a") as file:
             for key, value in register_values.items():
                 file.write("0b" + value + " ")
             # for key, value in memory_values.items():
@@ -433,14 +438,14 @@ while index in range(0, len(instructions)):
         break
     else:
         simulator(instructions[index])
-        with open("output11.txt", "a") as file:
+        with open(sys.argv[2], "a") as file:
             for key, value in register_values.items():
                 file.write("0b" + value + " ")
             # for key, value in memory_values.items():
             # file.write(key + " " + str(value) + "\n")")
             file.write("\n")
             index = int((bin_to_int(register_values["PC"]) / 4))
-            print(index)
-with open("output11.txt", "a") as file:
+            # print(index)
+with open(sys.argv[2], "a") as file:
     for key, value in data_memory.items():
         file.write(key + ":" + "0b" + value + "\n")
